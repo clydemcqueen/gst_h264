@@ -30,14 +30,14 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        # Grab h264 packets from a video4linux camera and publish on /image_raw/h264
+        # Generate test h264 packets and publish on /image_raw/h264
         Node(
             package='gst_h264',
             executable='gst_h264_node',
             output='screen',
             name='gst_h264_node',
             parameters=[{
-                'gst_config': 'v4l2src device=/dev/video0 ! h264parse',
+                'gst_config': 'videotestsrc is-live=true ! x264enc ! h264parse ! capsfilter caps=video/x-h264,stream-format=byte-stream,alignment=au',
                 'sync_sink': False,
                 'camera_info_url': 'file:///tmp/${NAME}.yaml',
                 'camera_name': 'forward_camera',

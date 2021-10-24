@@ -25,7 +25,7 @@ ARG TARGET_ROS_DISTRO
 ARG GST_H264_BRANCH
 ARG H264_IMAGE_TRANSPORT_BRANCH
 
-RUN git clone https://github.com/clydemcqueen/gst_h264.git -b GST_H264_BRANCH
+RUN git clone https://github.com/clydemcqueen/gst_h264.git -b $GST_H264_BRANCH
 RUN git clone https://github.com/clydemcqueen/h264_image_transport.git -b $H264_IMAGE_TRANSPORT_BRANCH
 
 WORKDIR /work/my_ws

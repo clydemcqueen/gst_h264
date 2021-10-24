@@ -61,5 +61,5 @@ decode the h264 messages.
 GStreamer is very powerful, but pipeline construction can be a bit of a challenge for GStreamer newbies. A few tips:
 * you will almost certainly need an `h264parse` element in the pipeline.
 * if your source is `videotestsrc` be sure to set `is-live=true` to slow the pipeline down to 30fps.
-* if you use `rtph264depay` you may need to add a `capsfilter caps=video/x-h264,stream-format=byte-stream,alignment=au`
+* you may need to add a `capsfilter caps=video/x-h264,stream-format=byte-stream,alignment=au`
   element to generate h264 messages that `h264_image_transport` can decode.
