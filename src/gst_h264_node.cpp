@@ -58,6 +58,7 @@ void copy_buffer(GstBuffer *buffer, std::vector<unsigned char> & dest)
 class GstH264Node : public rclcpp::Node
 {
   GstElement *sink_;
+  int seq_{};
 
   sensor_msgs::msg::CameraInfo camera_info_;
 
@@ -66,44 +67,46 @@ class GstH264Node : public rclcpp::Node
 
   // Poll GStreamer on a separate thread
   std::thread thread_;
-  std::atomic<bool> stop_signal_;
+  std::atomic<bool> stop_signal_{};
 
   // Parameters
   std::string gst_config_;
-  bool sync_sink_;
+  bool sync_sink_{};
   std::string camera_info_url_;
   std::string camera_name_;  // Used by CameraInfoManager, will substitute for ${NAME} in URL
 
-  void process_frame()
+  // Return true to continue, false to stop
+  bool process_frame()
   {
     // Poll for a frame, briefly block (timeout is in nanoseconds) -- prevents deadlock
-    GstSample *sample = gst_app_sink_try_pull_sample(GST_APP_SINK(sink_), 1000);
+    GstSample *sample = gst_app_sink_try_pull_sample(GST_APP_SINK(sink_), 1000000);
 
     if (!sample) {
-      return;
+      if (gst_app_sink_is_eos(GST_APP_SINK(sink_))) {
+        RCLCPP_INFO(get_logger(), "stream ended");
+        return false;
+      } else {
+        return true;
+      }
     }
 
     GstBuffer *buffer = gst_sample_get_buffer(sample);
 
     if (!buffer) {
-      RCLCPP_INFO(get_logger(), "stream ended");
-      stop_signal_ = true;
-      return;
+      return true;
     }
 
     camera_info_.header.stamp = now();
 
-    static int seq = 0;
-    seq++;
-    if (seq % 300 == 0) {
-      RCLCPP_INFO(get_logger(), "%d h264 frames", seq);
+    if (++seq_ % 300 == 0) {
+      RCLCPP_INFO(get_logger(), "%d h264 frames", seq_);
     }
 
     auto buffer_size = gst_buffer_get_size(buffer);
 
     h264_msgs::msg::Packet packet;
     packet.header = camera_info_.header;
-    packet.seq = seq;
+    packet.seq = seq_;
     packet.data.resize(buffer_size);
 
     copy_buffer(buffer, packet.data);
@@ -115,14 +118,14 @@ class GstH264Node : public rclcpp::Node
     }
 
     gst_sample_unref(sample);
+
+    return true;
   }
 
 public:
 
   GstH264Node():
-    Node("gst_h264_node"),
-    stop_signal_(),
-    sync_sink_()
+    Node("gst_h264_node")
   {
     declare_parameter("gst_config", rclcpp::ParameterValue(default_gst_config));
     declare_parameter("sync_sink", rclcpp::ParameterValue(false));
@@ -191,9 +194,7 @@ public:
       {
         RCLCPP_INFO(get_logger(), "thread running");  // NOLINT
 
-        while (!stop_signal_ && rclcpp::ok()) {
-          process_frame();
-        }
+        while (!stop_signal_ && rclcpp::ok() && process_frame());
 
         RCLCPP_INFO(get_logger(), "thread stopped");  // NOLINT
       });
