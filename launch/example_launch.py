@@ -37,7 +37,7 @@ def generate_launch_description():
             output='screen',
             name='gst_h264_node',
             parameters=[{
-                'gst_config': 'videotestsrc is-live=true ! x264enc ! h264parse ! capsfilter caps=video/x-h264,stream-format=byte-stream,alignment=au',
+                'gst_config': 'videotestsrc is-live=true num-buffers=200 ! x264enc ! h264parse ! capsfilter caps=video/x-h264,stream-format=byte-stream,alignment=au',
                 'sync_sink': False,
                 'camera_info_url': 'file:///tmp/${NAME}.yaml',
                 'camera_name': 'forward_camera',
